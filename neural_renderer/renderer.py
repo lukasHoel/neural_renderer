@@ -62,14 +62,14 @@ class Renderer(nn.Module):
         # rasterization
         self.rasterizer_eps = 1e-3
 
-    def forward(self, vertices, faces, textures=None, mode=None, K=None, R=None, t=None, dist_coeffs=None, orig_size=None):
+    def forward(self, vertices, faces, textures=None, mode=None, K=None, R=None, t=None, dist_coeffs=None, orig_size=None, at=None):
         '''
         Implementation of forward rendering method
         The old API is preserved for back-compatibility with the Chainer implementation
         '''
         
         if mode is None:
-            return self.render(vertices, faces, textures, K, R, t, dist_coeffs, orig_size)
+            return self.render(vertices, faces, textures, K, R, t, dist_coeffs, orig_size, at)
         elif mode is 'rgb':
             return self.render_rgb(vertices, faces, textures, K, R, t, dist_coeffs, orig_size)
         elif mode == 'silhouettes':
@@ -197,7 +197,7 @@ class Renderer(nn.Module):
             self.background_color)
         return images
 
-    def render(self, vertices, faces, textures, K=None, R=None, t=None, dist_coeffs=None, orig_size=None):
+    def render(self, vertices, faces, textures, K=None, R=None, t=None, dist_coeffs=None, orig_size=None, at=None):
         # fill back
         if self.fill_back:
             faces = torch.cat((faces, faces[:, :, list(reversed(range(faces.shape[-1])))]), dim=1).detach()
@@ -205,6 +205,8 @@ class Renderer(nn.Module):
 
         # lighting
         faces_lighting = nr.vertices_to_faces(vertices, faces)
+        if at is not None:
+            self.light_direction = -at
         textures = nr.lighting(
             faces_lighting,
             textures,
@@ -221,7 +223,7 @@ class Renderer(nn.Module):
             if self.perspective:
                 vertices = nr.perspective(vertices, angle=self.viewing_angle)
         elif self.camera_mode == 'look':
-            vertices = nr.look(vertices, self.eye, self.camera_direction)
+            vertices = nr.look(vertices, self.eye)
             # perspective transformation
             if self.perspective:
                 vertices = nr.perspective(vertices, angle=self.viewing_angle)
