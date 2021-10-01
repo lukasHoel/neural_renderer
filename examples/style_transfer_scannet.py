@@ -119,7 +119,8 @@ def main():
     parser.add_argument('-lc', '--lambda_content', type=float, default=0)
     parser.add_argument('-ls', '--lambda_style', type=float, default=1)
     parser.add_argument('-ltv', '--lambda_tv', type=float, default=1e7)
-    parser.add_argument('-e', '--epochs', type=int, default=10)
+    parser.add_argument('-e', '--epochs', type=int, default=100)
+    parser.add_argument('-ln', '--log_nth', type=int, default=20)
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.1)
     parser.add_argument('-mi', '--max_images', type=int, default=-1)
     parser.add_argument('--size', type=int, default=224)
@@ -157,10 +158,11 @@ def main():
             items.set_postfix({"loss": loss.cpu().detach().numpy().item()})
             optimizer.step()
 
-            image = model(rgb.unsqueeze(0).cuda(), extrinsics, intrinsics, mask.cuda(), calc_loss=False)
-            image = image.detach().cpu().numpy()[0].transpose((1, 2, 0))
-            imsave('/tmp/_tmp_%04d.png' % i, image)
-        make_gif(f"{args.filename_output}_epoch_{epoch}.gif")
+            if epoch % args.log_nth == 0 or args.log_nth == -1:
+                image = image.detach().cpu().numpy()[0].transpose((1, 2, 0))
+                imsave('/tmp/_tmp_%04d.png' % i, image)
+        if epoch % args.log_nth == 0 or args.log_nth == -1:
+            make_gif(f"{args.filename_output}_epoch_{epoch}.gif")
 
 
 if __name__ == '__main__':
