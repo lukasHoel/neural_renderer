@@ -110,19 +110,32 @@ def total_variation_loss(x, mask=None):
     return h_tv + w_tv
 
 
-def pre():
-    return transforms.Compose([
-        transforms.Lambda(lambda x: x[torch.LongTensor([2, 1, 0])]),  # turn to BGR
-        transforms.Normalize(mean=[0.40760392, 0.45795686, 0.48501961],  # subtract imagenet mean
-                             std=[1, 1, 1]),
-        transforms.Lambda(lambda x: x.mul_(255)), # from 0..1 to 0..255
-    ])
+def pre(img):
+    img = img[:, torch.LongTensor([2, 1, 0])]  # to BGR
+
+    mean = torch.FloatTensor([0.40760392, 0.45795686, 0.48501961]).type_as(img)
+    mean = mean.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+    mean = mean.repeat(img.shape[0], 1, img.shape[2], img.shape[3])
+
+    img = img - mean
+    img = img * 255.0
+
+    return img
 
 
-def transform(img):
-    t = pre()
-    for i in range(img.shape[0]):
-        img[i] = t(img[i])
+def post(img):
+    img = img / 255.0
+
+    mean = torch.FloatTensor([0.40760392, 0.45795686, 0.48501961]).type_as(img)
+    mean = mean.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+    mean = mean.repeat(img.shape[0], 1, img.shape[2], img.shape[3])
+
+    img = img + mean
+
+    img = img[:, torch.LongTensor([2, 1, 0])]  # to RGB
+
+    img = torch.clamp(img, 0, 1)
+
     return img
 
 
@@ -160,25 +173,26 @@ class GatysVggLoss(torch.nn.Module):
         self.style_targets = None
 
     def forward(self, pred, target_content, target_style, mask=None):
+        # compute tv loss
+        tv_loss = total_variation_loss(pred, mask)
+
         # compute prediction (just one joint forward pass for content and style layers needed)
-        out = self.vgg(transform(pred), self.layers)
+        out = self.vgg(pre(pred), self.layers)
         out = mask_features_all(out, mask)
         out_style = [GramMatrix()(o) for o in out[:len(self.style_layers)]]
         out_content = out[len(self.style_layers):]
 
         # compute style targets.
         if self.style_targets is None:
-            self.style_targets = [GramMatrix()(s).detach() for s in self.vgg(transform(target_style), self.style_layers)]
+            self.style_targets = [GramMatrix()(s).detach() for s in self.vgg(pre(target_style), self.style_layers)]
+        style_losses = [self.style_weights[i] * self.mse(y_hat, y) for i, (y, y_hat) in enumerate(zip(self.style_targets, out_style))]
 
         # compute content targets.
-        content_targets = [c.detach() for c in self.vgg(transform(target_content), self.content_layers)]
-        content_targets = mask_features_all(content_targets, mask)
-
-        # compute tv loss
-        tv_loss = total_variation_loss(pred, mask)
-
-        # compute losses
-        style_losses = [self.style_weights[i] * self.mse(y_hat, y) for i, (y, y_hat) in enumerate(zip(self.style_targets, out_style))]
-        content_losses = [self.content_weights[i] * self.mse(y_hat, y) for i, (y, y_hat) in enumerate(zip(content_targets, out_content))]
+        if target_content is not None:
+            content_targets = [c.detach() for c in self.vgg(pre(target_content), self.content_layers)]
+            content_targets = mask_features_all(content_targets, mask)
+            content_losses = [self.content_weights[i] * self.mse(y_hat, y) for i, (y, y_hat) in enumerate(zip(content_targets, out_content))]
+        else:
+            content_losses = [0]
 
         return sum(style_losses), sum(content_losses), tv_loss

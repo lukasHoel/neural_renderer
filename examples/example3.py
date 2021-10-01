@@ -74,6 +74,7 @@ def main():
         loop.set_description('Optimizing')
         optimizer.zero_grad()
         loss = model()
+        loop.set_postfix({"loss": loss.detach().cpu().numpy().item()})
         loss.backward()
         optimizer.step()
 
