@@ -17,6 +17,7 @@ import imageio
 import neural_renderer as nr
 from scannet_single_scene_dataset import ScanNet_Single_House_Dataset
 from vgg_loss import GatysVggLoss
+from pathlib import Path
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
 data_dir = os.path.join(current_dir, 'data')
@@ -101,12 +102,25 @@ class Model(nn.Module):
         return loss, image
 
 
-def make_gif(filename):
+def make_gif(filename, pattern='/tmp/_tmp_*.png', remove=True):
     with imageio.get_writer(filename, mode='I') as writer:
-        for filename in sorted(glob.glob('/tmp/_tmp_*.png')):
+        for filename in sorted(glob.glob(pattern)):
             writer.append_data(imageio.imread(filename))
-            os.remove(filename)
+            if remove:
+                os.remove(filename)
     writer.close()
+
+
+def get_key(args):
+    style = args.filename_style
+    style = os.path.basename(style)
+
+    key = f"style_transfer_scannet_{args.scene}_{style}_content_{args.lambda_content}_style_{args.lambda_style}_tv_{args.lambda_tv}" \
+          f"_epochs_{args.epochs}_lr_{args.learning_rate}_images_{args.max_images}_repeat_{args.index_repeat}"
+
+    dir = os.path.join(args.out_dir, args.scene, style)
+
+    return dir, key
 
 
 def main():
@@ -114,7 +128,7 @@ def main():
     parser.add_argument('-io', '--mesh', type=str, default="/home/hoellein/datasets/scannet/train/scans/scene0673_00/scene0673_00_vh_clean_decimate_500000_uvs_blender.obj")
     parser.add_argument('-s', '--scene', type=str, default="scene0673_00")
     parser.add_argument('-is', '--filename_style', type=str, default="/home/hoellein/datasets/styles/3style/14-2.jpg")
-    parser.add_argument('-or', '--filename_output', type=str, default=os.path.join(data_dir, 'example3_scannet_result'))
+    parser.add_argument('-d', '--out_dir', type=str, default=os.path.join(data_dir))
     parser.add_argument('-vgg', '--vgg_model_path', type=str, default="/home/hoellein/models/vgg_conv.pth")
     parser.add_argument('-lc', '--lambda_content', type=float, default=0)
     parser.add_argument('-ls', '--lambda_style', type=float, default=1)
@@ -128,6 +142,9 @@ def main():
     parser.add_argument('-g', '--gpu', type=int, default=0)
     args = parser.parse_args()
 
+    dir, key = get_key(args)
+    Path(dir).mkdir(parents=True, exist_ok=True)
+    out_prefix = os.path.join(dir, key)
     d = ScanNet_Single_House_Dataset(root_path="/home/hoellein/datasets/scannet/train/images",
                                      scene=args.scene,
                                      verbose=True,
@@ -150,6 +167,7 @@ def main():
     for epoch in range(args.epochs):
         items = tqdm(d)
         items.set_description(f"Epoch {epoch}")
+        out_prefix_epoch = f'{out_prefix}_epoch_{epoch}'
         for i, (rgb, extrinsics, intrinsics, mask) in enumerate(tqdm(d)):
             if -1 < args.max_images <= i:
                 break
@@ -163,8 +181,13 @@ def main():
             if epoch % args.log_nth == 0 or args.log_nth == -1:
                 image = image.detach().cpu().numpy()[0].transpose((1, 2, 0))
                 imsave('/tmp/_tmp_%04d.png' % i, image)
+
+                mask3 = torch.stack([mask, mask, mask], dim=0)  # from (H x W) to (3 x H x W)
+                image_masked = np.where(mask3.detach().cpu().permute(1,2,0).numpy(), image, np.zeros_like(image))
+                imsave(f'{out_prefix_epoch}_{i}.png', image_masked)
         if epoch % args.log_nth == 0 or args.log_nth == -1:
-            make_gif(f"{args.filename_output}_epoch_{epoch}.gif")
+            make_gif(f"{out_prefix_epoch}.gif")
+            make_gif(f"{out_prefix_epoch}.gif", f"{out_prefix_epoch}*.png", remove=False)
 
 
 if __name__ == '__main__':

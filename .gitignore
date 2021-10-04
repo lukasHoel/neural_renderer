@@ -120,4 +120,5 @@ examples/data/example2_optimization.gif
 
 
 examples/data/*scannet*
+examples/data/scene*
 .idea
