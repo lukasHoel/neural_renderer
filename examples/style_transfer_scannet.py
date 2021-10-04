@@ -123,6 +123,7 @@ def main():
     parser.add_argument('-ln', '--log_nth', type=int, default=20)
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.1)
     parser.add_argument('-mi', '--max_images', type=int, default=-1)
+    parser.add_argument('-ir', '--index_repeat', type=int, default=1)
     parser.add_argument('--size', type=int, default=224)
     parser.add_argument('-g', '--gpu', type=int, default=0)
     args = parser.parse_args()
@@ -152,11 +153,12 @@ def main():
         for i, (rgb, extrinsics, intrinsics, mask) in enumerate(tqdm(d)):
             if -1 < args.max_images <= i:
                 break
-            optimizer.zero_grad()
-            loss, image = model(rgb.unsqueeze(0).cuda(), extrinsics, intrinsics, mask.cuda())
-            loss.backward()
-            items.set_postfix({"loss": loss.cpu().detach().numpy().item()})
-            optimizer.step()
+            for _ in range(args.index_repeat):
+                optimizer.zero_grad()
+                loss, image = model(rgb.unsqueeze(0).cuda(), extrinsics, intrinsics, mask.cuda())
+                loss.backward()
+                items.set_postfix({"loss": loss.cpu().detach().numpy().item()})
+                optimizer.step()
 
             if epoch % args.log_nth == 0 or args.log_nth == -1:
                 image = image.detach().cpu().numpy()[0].transpose((1, 2, 0))
