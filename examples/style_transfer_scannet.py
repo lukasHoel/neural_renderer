@@ -203,7 +203,7 @@ def main():
         # after each epoch, we collect the images and make a .gif out of them
         if epoch % args.log_nth == 0 or args.log_nth == -1:
             make_gif(f"{out_prefix_epoch}.gif", f"{out_prefix_epoch}*.png", remove=False)
-            nr.save_obj(f"{out_prefix_epoch}.obj", model.vertices[0], model.faces[0], model.textures[0])
+            #nr.save_obj(f"{out_prefix_epoch}.obj", model.vertices[0], model.faces[0], model.textures[0])
 
 
 if __name__ == '__main__':

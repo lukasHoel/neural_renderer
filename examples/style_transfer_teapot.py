@@ -129,6 +129,7 @@ def main():
         image = images.detach().cpu().numpy()[0].transpose((1, 2, 0))
         imsave('/tmp/_tmp_%04d.png' % num, image)
     make_gif(args.filename_output)
+    nr.save_obj(args.filename_output + ".obj", model.vertices[0], model.faces[0], model.textures[0])
 
 
 if __name__ == '__main__':
