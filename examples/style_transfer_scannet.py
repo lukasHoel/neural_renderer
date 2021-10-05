@@ -89,6 +89,7 @@ class Model(nn.Module):
         s, c, tv = self.vgg_loss(image, content_img, self.style_image, mask)
         loss = self.lambda_content * c + self.lambda_style * s + self.lambda_tv * tv
 
+        """
         print(f"C: {c}, S: {s}, TV: {tv}")
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(1, 3)
@@ -96,6 +97,7 @@ class Model(nn.Module):
         ax[1].imshow(torchvision.transforms.ToPILImage()(image.squeeze()))
         ax[2].imshow(mask.cpu().numpy())
         plt.show()
+        """
 
         return loss, image
 
