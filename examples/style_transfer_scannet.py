@@ -136,7 +136,7 @@ def main():
     parser.add_argument('-lc', '--lambda_content', type=float, default=1e2)
     parser.add_argument('-ls', '--lambda_style', type=float, default=1)
     parser.add_argument('-ltv', '--lambda_tv', type=float, default=1e8)
-    parser.add_argument('-e', '--epochs', type=int, default=10)
+    parser.add_argument('-e', '--epochs', type=int, default=5)
     parser.add_argument('-ln', '--log_nth', type=int, default=1)
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.1)
     parser.add_argument('-mi', '--max_images', type=int, default=-1)
@@ -203,6 +203,7 @@ def main():
         # after each epoch, we collect the images and make a .gif out of them
         if epoch % args.log_nth == 0 or args.log_nth == -1:
             make_gif(f"{out_prefix_epoch}.gif", f"{out_prefix_epoch}*.png", remove=False)
+            nr.save_obj(f"{out_prefix_epoch}.obj", model.vertices[0], model.faces[0], model.textures[0])
 
 
 if __name__ == '__main__':
