@@ -105,7 +105,7 @@ class Model(nn.Module):
 def make_gif(filename, pattern='/tmp/_tmp_*.png', remove=True):
     with imageio.get_writer(filename, mode='I') as writer:
         files = glob.glob(pattern)
-        files = sorted(files, key=lambda x: int(x.split(".")[0].split("_")[-1]))
+        files = sorted(files, key=lambda x: int(x.split(".")[-2].split("_")[-1]))
         for filename in files:
             writer.append_data(imageio.imread(filename))
             if remove:
