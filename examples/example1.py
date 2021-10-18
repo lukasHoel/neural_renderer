@@ -9,6 +9,8 @@ import numpy as np
 import tqdm
 import imageio
 
+import time
+
 import neural_renderer as nr
 
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -43,13 +45,22 @@ def main():
     # draw object
     loop = tqdm.tqdm(range(0, 360, 4))
     writer = imageio.get_writer(args.filename_output, mode='I')
+    times = []
     for num, azimuth in enumerate(loop):
         loop.set_description('Drawing')
         renderer.eye = nr.get_points_from_angles(camera_distance, elevation, azimuth)
+
+        start = time.time()
         images, _, _ = renderer(vertices, faces, textures)  # [batch_size, RGB, image_size, image_size]
+        end = time.time()
+        times.append(end - start)
+
         image = images.detach().cpu().numpy()[0].transpose((1, 2, 0))  # [image_size, image_size, RGB]
         writer.append_data((255*image).astype(np.uint8))
     writer.close()
+
+    print(np.mean(times))
+
 
 if __name__ == '__main__':
     main()

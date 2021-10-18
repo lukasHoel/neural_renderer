@@ -15,7 +15,7 @@ from tqdm.auto import tqdm
 import imageio
 
 import neural_renderer as nr
-from scannet_single_scene_dataset import ScanNet_Single_House_Dataset
+from matterport_single_scene_dataset import Matterport_Single_House_Dataset
 from vgg_loss import GatysVggLoss
 from pathlib import Path
 
@@ -43,7 +43,7 @@ class Model(nn.Module):
         self.register_buffer('style_image', style_image)
 
         # setup renderer
-        renderer = nr.Renderer(camera_mode='projection', image_size=image_size)
+        renderer = nr.Renderer(camera_mode='projection', image_size=image_size, far=1000)
         self.renderer = renderer
 
         # setup content and style losses
@@ -81,7 +81,7 @@ class Model(nn.Module):
             self.P = P
 
         image, _, _ = self.renderer(self.vertices, self.faces, torch.sigmoid(self.textures), K=self.P, R=R, t=t, at=look)  # [batch_size, RGB, image_size, image_size]
-        image = torch.flip(image, (2,))
+        #image = torch.flip(image, (2,))
 
         if not calc_loss:
             return image
@@ -117,19 +117,19 @@ def get_key(args):
     style = args.filename_style
     style = os.path.basename(style)
 
-    key = f"style_transfer_scannet_{args.scene}_{style}_content_{args.lambda_content}_style_{args.lambda_style}_tv_{args.lambda_tv}" \
+    key = f"style_transfer_matterport_{args.scene}_{str(args.region)}_{style}_content_{args.lambda_content}_style_{args.lambda_style}_tv_{args.lambda_tv}" \
           f"_epochs_{args.epochs}_lr_{args.learning_rate}_images_{args.max_images}_repeat_{args.index_repeat}"
 
-    dir = os.path.join(args.out_dir, args.scene, style)
+    dir = os.path.join(args.out_dir, args.scene, str(args.region), style)
 
     return dir, key
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-dp', '--data_path', type=str, default="/home/hoellein/datasets/scannet/train/")
-    parser.add_argument('-if', '--image_folder', type=str, default="_additional")
-    parser.add_argument('-s', '--scene', type=str, default="scene0673_00")
+    parser.add_argument('-dp', '--data_path', type=str, default="/home/hoellein/datasets/Matterport3D/v1/scans")
+    parser.add_argument('-s', '--scene', type=str, default="17DRP5sb8fy")
+    parser.add_argument('-r', '--region', type=int, default=0)
     parser.add_argument('-is', '--filename_style', type=str, default="/home/hoellein/datasets/styles/3style/14-2.jpg")
     parser.add_argument('-d', '--out_dir', type=str, default=os.path.join(data_dir))
     parser.add_argument('-vgg', '--vgg_model_path', type=str, default="/home/hoellein/models/vgg_conv.pth")
@@ -151,19 +151,19 @@ def main():
     out_prefix = os.path.join(dir, key)
 
     # build dataset
-    image_path = os.path.join(args.data_path, args.image_folder)
-    d = ScanNet_Single_House_Dataset(root_path=image_path,
-                                     scene=args.scene,
-                                     verbose=True,
-                                     transform_rgb=torchvision.transforms.ToTensor(),
-                                     resize=True,
-                                     resize_size=(args.size, args.size),
-                                     max_images=1000,
-                                     min_images=1)
+    d = Matterport_Single_House_Dataset(root_path=args.data_path,
+                                        scene=args.scene,
+                                        region_index=args.region,
+                                        verbose=True,
+                                        transform_rgb=torchvision.transforms.ToTensor(),
+                                        resize=True,
+                                        resize_size=(args.size, args.size),
+                                        max_images=1000,
+                                        min_images=1)
 
     # construct model with mesh, style image and vgg
-    mesh_name = f'{args.scene}_vh_clean_decimate_500000_uvs_blender.obj'
-    mesh_path = os.path.join(args.data_path, 'scans', args.scene, mesh_name)
+    mesh_name = f'region{str(args.region)}.obj'
+    mesh_path = os.path.join(args.data_path, args.scene, 'region_segmentations', args.scene, 'region_segmentations', mesh_name)
     model = Model(mesh_path, args.filename_style, args.vgg_model_path,
                   lambda_content=args.lambda_content,
                   lambda_style=args.lambda_style,
