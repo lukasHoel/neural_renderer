@@ -31,6 +31,7 @@ def create_texture_image(textures, texture_size_out=16):
     vertices[:, :, 1] /= (image.shape[0] - 1)
     
     image = image.detach().cpu().numpy()
+
     vertices = vertices.detach().cpu().numpy()
     image = image[::-1, ::1]
 

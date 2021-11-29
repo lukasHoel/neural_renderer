@@ -43,7 +43,7 @@ class Model(nn.Module):
         self.register_buffer('style_image', style_image)
 
         # setup renderer
-        renderer = nr.Renderer(camera_mode='projection', image_size=image_size, far=1000)
+        renderer = nr.Renderer(camera_mode='projection', image_size=image_size, far=1000, light_intensity_ambient=0.3, light_intensity_directional=0.0)
         self.renderer = renderer
 
         # setup content and style losses
@@ -133,10 +133,10 @@ def main():
     parser.add_argument('-is', '--filename_style', type=str, default="/home/hoellein/datasets/styles/3style/14-2.jpg")
     parser.add_argument('-d', '--out_dir', type=str, default=os.path.join(data_dir))
     parser.add_argument('-vgg', '--vgg_model_path', type=str, default="/home/hoellein/models/vgg_conv.pth")
-    parser.add_argument('-lc', '--lambda_content', type=float, default=1e2)
+    parser.add_argument('-lc', '--lambda_content', type=float, default=1e3)
     parser.add_argument('-ls', '--lambda_style', type=float, default=1)
     parser.add_argument('-ltv', '--lambda_tv', type=float, default=1e8)
-    parser.add_argument('-e', '--epochs', type=int, default=5)
+    parser.add_argument('-e', '--epochs', type=int, default=80)
     parser.add_argument('-ln', '--log_nth', type=int, default=1)
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.1)
     parser.add_argument('-mi', '--max_images', type=int, default=-1)
@@ -162,7 +162,7 @@ def main():
                                         min_images=1)
 
     # construct model with mesh, style image and vgg
-    mesh_name = f'region{str(args.region)}.obj'
+    mesh_name = f'region{str(args.region)}_uvs_blender.obj'
     mesh_path = os.path.join(args.data_path, args.scene, 'region_segmentations', args.scene, 'region_segmentations', mesh_name)
     model = Model(mesh_path, args.filename_style, args.vgg_model_path,
                   lambda_content=args.lambda_content,

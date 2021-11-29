@@ -133,10 +133,10 @@ def main():
     parser.add_argument('-is', '--filename_style', type=str, default="/home/hoellein/datasets/styles/3style/14-2.jpg")
     parser.add_argument('-d', '--out_dir', type=str, default=os.path.join(data_dir))
     parser.add_argument('-vgg', '--vgg_model_path', type=str, default="/home/hoellein/models/vgg_conv.pth")
-    parser.add_argument('-lc', '--lambda_content', type=float, default=1e2)
+    parser.add_argument('-lc', '--lambda_content', type=float, default=1e2) #1e2
     parser.add_argument('-ls', '--lambda_style', type=float, default=1)
-    parser.add_argument('-ltv', '--lambda_tv', type=float, default=1e8)
-    parser.add_argument('-e', '--epochs', type=int, default=5)
+    parser.add_argument('-ltv', '--lambda_tv', type=float, default=1e8) #1e8
+    parser.add_argument('-e', '--epochs', type=int, default=3)
     parser.add_argument('-ln', '--log_nth', type=int, default=1)
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.1)
     parser.add_argument('-mi', '--max_images', type=int, default=-1)
@@ -158,7 +158,7 @@ def main():
                                      transform_rgb=torchvision.transforms.ToTensor(),
                                      resize=True,
                                      resize_size=(args.size, args.size),
-                                     max_images=1000,
+                                     max_images=10000,
                                      min_images=1)
 
     # construct model with mesh, style image and vgg

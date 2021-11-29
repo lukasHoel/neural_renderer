@@ -35,8 +35,8 @@ def projection_graphics(vertices, P, R, t, eps=1e-9):
     eye = t.squeeze()
     at = R[0, :3, 2]
     up = R[0, :3, 1]
-    #vertices = look(vertices, eye, at, up)
-    vertices = torch.matmul(vertices, R.transpose(2,1)) + t
+    #vertices = look(vertices, eye, at, up)  # for scannet
+    vertices = torch.matmul(vertices, R.transpose(2,1)) + t   # for matterport
 
     vertices = torch.cat([vertices, torch.ones_like(vertices[:, :, :1])], dim=-1)  # add homogenous component
     vertices = torch.bmm(vertices, P.transpose(1, 2))  # view to clip space
